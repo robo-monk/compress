@@ -35,27 +35,25 @@ impl Node {
         // let serialized_value = self.value().to_digit(10).unwrap_or(0);
         let empty_value = &String::from("");
         let serialized_value = self.value.as_ref().unwrap_or(empty_value);
+
         if self.is_leaf() {
             return format!("[{},{}]", serialized_value, self.frequency);
         }
+
 
         return format!(
             "[{},{},{},{}]",
             serialized_value,
             self.frequency,
-            self.left.as_ref().unwrap().serialize(),
-            self.right.as_ref().unwrap().serialize()
+            self.left.as_ref().unwrap_or(&Box::from(Node::new(0, None))).serialize(),
+            self.right.as_ref().unwrap_or(&Box::from(Node::new(0, None))).serialize()
         );
     }
-
-
 }
 
 struct Tree {
     root: Node,
 }
-
-
 
 fn queue_to_tree(mut queue: Vec<Node>) -> Tree {
     if queue.len() == 1 {
@@ -122,7 +120,7 @@ impl Tree {
     }
 
     // fn new_from_serialization(serialization: String) -> Self {
-    //     let chars 
+    //     let chars
     // }
 
     fn serialize(&self) -> String {
@@ -131,10 +129,14 @@ impl Tree {
 }
 
 fn main() {
-
     let tree = Tree::new_from(String::from("gamw2222222222"));
     let serialization = tree.serialize();
     println!("{}", serialization);
+
+    let _node = decode(serialization.to_owned());
+
+    println!("encoded> {}", serialization);
+    println!("decoded> {}", _node.serialize());
     // Node::new(8, String::from("test"));
 }
 
@@ -142,107 +144,80 @@ fn decode(serialization: String) -> Node {
     let mut chars = serialization.chars();
     let mut map: HashMap<char, u32> = HashMap::new();
 
-    let mut bracket_counter: i32 = -1;
+    let mut bracket_counter: i32 = 0;
     let mut starter_bracket_index: i32 = -1;
 
     let mut buffer: Vec<char> = Vec::new();
 
+    let mut index = 0;
     let mut parent_node = Node::new(0, None);
 
-    let cursor = chars.next();
-    if cursor.is_none() { return Node::new(0, None) }
+    while true {
+        let cursor = chars.next();
+        if cursor.is_none() {
+            break;
+        };
 
-    match cursor.unwrap() {
-        '[' => {
-            println!("<")
-        },
-        ']' => {
-            println!(">")
-        },
-        _ => {
+        let c = cursor.unwrap();
 
-            println!("~")
+        match c {
+            '[' => {
+                if bracket_counter > 0 {
+                    buffer.push(c);
+                }
+
+                // starter_bracket_index = index;
+                bracket_counter += 1;
+            }
+            ']' => {
+                bracket_counter -= 1;
+                buffer.push(c);
+                // println!("branch found start: {}, end: {}", starter_bracket_index, index);
+                // println!("]");
+                if bracket_counter == 0 {
+                    let s = String::from_iter(&buffer);
+                    println!(">> {}", s);
+
+                    // decode(s);
+                    buffer.clear();
+                } else if bracket_counter == 1 {
+                    let branch = String::from_iter(&buffer);
+                    if parent_node.left.is_none() {
+                        let node = decode(branch.to_owned());
+                        println!(">> node > {}", node.serialize());
+                        parent_node.left = decode(branch.to_owned()).into();
+                        println!(">> found left branch > {}  \n\n {} \n\n", branch, parent_node.serialize());
+                    } else if parent_node.right.is_none() {
+                        parent_node.right = decode(branch.to_owned()).into();
+                        println!(">> found left branch > {}", branch);
+                    } else {
+                        println!(">> invalid serialization");
+                    }
+
+                    buffer.clear();
+                }
+            }
+            ',' => {
+                if parent_node.value.is_none() {
+                    println!("~ value > {}", String::from_iter(&buffer));
+                    parent_node.value = Some(String::from_iter(&buffer));
+                    buffer.clear();
+                } else if parent_node.frequency == 0 {
+                    parent_node.frequency = String::from_iter(&buffer).parse().unwrap_or(255);
+                    println!("~ freq > {}", parent_node.frequency);
+                    buffer.clear();
+                } else {
+                    buffer.push(c);
+                }
+            }
+            _ => {
+                buffer.push(c);
+                // println!("~ {}", c);
+            }
         }
+
+        index += 1;
     }
-
-    buffer.push(cursor.unwrap());
-
-    // for (i, c) in chars.enumerate() {
-
-    //     buffer.push(c);
-    //     if c == '[' {
-    //         bracket_counter += 1;
-    //         if bracket_counter == 0 {
-    //             starter_bracket_index = i as i32;
-    //             bracket_counter = 0;
-    //         }
-    //     }
-
-    //     if c == ']' {
-    //         // println!("] {}", bracket_counter);
-    //         bracket_counter -= 1;
-    //         if bracket_counter == -1 {
-    //             buffer = buffer.drain(1..(buffer.len()-1)).collect(); // remove first [
-
-    //             let s = String::from_iter(&buffer);
-    //             // let serialization = decode((&s).to_string());
-    //             println!("#{} branch {}", starter_bracket_index, s);
-
-    //             let mut buffer_split = s.split(',').into_iter();
-    //             let serialized_value = buffer_split.next().unwrap();
-    //             let frequency = buffer_split.next().unwrap();
-    //             // let value = serialized_value.get(0);
-
-    //             let parsed_frequency: u32 = frequency.parse().unwrap();
-    //             let parsed_value: char = serialized_value.chars().next().unwrap();
-    //             // let parsed_value: u32 = serialized_value.parse().unwrap();
-
-    //             if starter_bracket_index == 0 {
-    //                 parent_node = Node::new((parsed_frequency, parsed_value));
-    //                 // parent_node.frequency = frequency;
-    //             }
-
-    //             println!("~~> parse freq: {}", parsed_frequency);
-    //             println!("~~> parse value: {}", parsed_value);
-    //             // println!("~~> parse frequ: {}", parsed_value);
-            
-    //             // buffer_split.map(|chunk| chunk + ",");
-    //             // let branches = String::from_iter(buffer_split);
-    //             let branches = String::from_iter(buffer_split.map(|chunk| format!("{},", chunk)));
-                
-    //             // println!(">> blen {}", branches.len());
-    //             if branches.len() == 0 {
-    //                 // let _frequency: u32 = frequency.to_owned().into();
-    //                 // let node = Node::new((parsed_frequency, parsed_value));
-    //                 // node.serialize_debug();
-    //                 // println!("")
-    //             } else {
-    //                 println!("---- more branches ----");
-    //                 let mut node = decode(branches.to_owned());
-    //                 // parent_node.left = node;
-    //                 // parent_node = Node::new((parent_node.frequency(), parent_node.value()));
-    //                 let mut right: Option<Box<Node<(u32, char)>>> = None;
-
-    //                 if node.left.is_some() { right = node.left.unwrap().into() };
-    //                 let left: Option<Box<Node<(u32, char)>>> = Node::new((node.v.0.to_owned(), node.v.1.to_owned())).into();
-    //                 // let right: Option<Box<Node<(u32, char)>>> = node.left().unwrap().into();
-
-    //                 parent_node = Node {
-    //                     v: (parent_node.frequency(), parent_node.value()),
-    //                     left,
-    //                     right
-    //                 };
-
-    //                 println!("debug node >");
-    //                 println!("debug node left>");
-    //                 println!("-----");
-    //             }
-
-    //             bracket_counter = -1;
-    //             buffer.clear()
-    //         }
-    //     }
-    // }
 
     return parent_node;
 }
