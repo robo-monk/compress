@@ -37,16 +37,21 @@ impl Node {
         let serialized_value = self.value.as_ref().unwrap_or(empty_value);
 
         if self.is_leaf() {
-            return format!("[{},{}]", serialized_value, self.frequency);
+            return format!("[{},{},]", serialized_value, self.frequency);
         }
-
 
         return format!(
             "[{},{},{},{}]",
             serialized_value,
             self.frequency,
-            self.left.as_ref().unwrap_or(&Box::from(Node::new(0, None))).serialize(),
-            self.right.as_ref().unwrap_or(&Box::from(Node::new(0, None))).serialize()
+            self.left
+                .as_ref()
+                .unwrap_or(&Box::from(Node::new(0, None)))
+                .serialize(),
+            self.right
+                .as_ref()
+                .unwrap_or(&Box::from(Node::new(0, None)))
+                .serialize()
         );
     }
 }
@@ -142,7 +147,6 @@ fn main() {
 
 fn decode(serialization: String) -> Node {
     let mut chars = serialization.chars();
-    let mut map: HashMap<char, u32> = HashMap::new();
 
     let mut bracket_counter: i32 = 0;
     let mut starter_bracket_index: i32 = -1;
@@ -166,30 +170,28 @@ fn decode(serialization: String) -> Node {
                     buffer.push(c);
                 }
 
-                // starter_bracket_index = index;
                 bracket_counter += 1;
             }
+
             ']' => {
                 bracket_counter -= 1;
                 buffer.push(c);
-                // println!("branch found start: {}, end: {}", starter_bracket_index, index);
-                // println!("]");
+
                 if bracket_counter == 0 {
                     let s = String::from_iter(&buffer);
                     println!(">> {}", s);
-
                     // decode(s);
                     buffer.clear();
                 } else if bracket_counter == 1 {
                     let branch = String::from_iter(&buffer);
                     if parent_node.left.is_none() {
                         let node = decode(branch.to_owned());
-                        println!(">> node > {}", node.serialize());
+                        // println!(">> node > {}", node.serialize());
                         parent_node.left = decode(branch.to_owned()).into();
-                        println!(">> found left branch > {}  \n\n {} \n\n", branch, parent_node.serialize());
+                        // println!(">> found left branch > {}  \n\n {} \n\n", branch, parent_node.serialize());
                     } else if parent_node.right.is_none() {
                         parent_node.right = decode(branch.to_owned()).into();
-                        println!(">> found left branch > {}", branch);
+                        // println!(">> found right branch > {}", branch);
                     } else {
                         println!(">> invalid serialization");
                     }
@@ -198,13 +200,19 @@ fn decode(serialization: String) -> Node {
                 }
             }
             ',' => {
+                println!("> length @ {}", buffer.len());
+                // if buffer.len() == 0 {
+                //     buffer.push(c);
+                // } else
+
                 if parent_node.value.is_none() {
                     println!("~ value > {}", String::from_iter(&buffer));
                     parent_node.value = Some(String::from_iter(&buffer));
                     buffer.clear();
                 } else if parent_node.frequency == 0 {
+                    println!("~ freq > {}", String::from_iter(&buffer));
                     parent_node.frequency = String::from_iter(&buffer).parse().unwrap_or(255);
-                    println!("~ freq > {}", parent_node.frequency);
+                    // println!("~ freq > {}", parent_node.frequency);
                     buffer.clear();
                 } else {
                     buffer.push(c);
