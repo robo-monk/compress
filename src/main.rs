@@ -179,18 +179,25 @@ fn decode(serialization: String) -> Node {
 
                 if bracket_counter == 0 {
                     let s = String::from_iter(&buffer);
-                    println!(">> {}", s);
+                    println!("clear buffer >> {}", s);
+                    println!("parent node is >> {}", parent_node.serialize());
+                    println!("----");
                     // decode(s);
                     buffer.clear();
                 } else if bracket_counter == 1 {
                     let branch = String::from_iter(&buffer);
+                    println!("parent node is >> {}", parent_node.serialize());
                     if parent_node.left.is_none() {
-                        let node = decode(branch.to_owned());
+                        // let node = decode(branch.to_owned());
                         // println!(">> node > {}", node.serialize());
+                        println!("left branch >> {}", branch);
                         parent_node.left = decode(branch.to_owned()).into();
                         // println!(">> found left branch > {}  \n\n {} \n\n", branch, parent_node.serialize());
                     } else if parent_node.right.is_none() {
-                        parent_node.right = decode(branch.to_owned()).into();
+                        println!("right branch >> {}", branch);
+                        let mut trimmed_branch = branch.to_owned();
+                        trimmed_branch.remove(0);
+                        parent_node.right = decode(trimmed_branch).into();
                         // println!(">> found right branch > {}", branch);
                     } else {
                         println!(">> invalid serialization");
@@ -200,7 +207,7 @@ fn decode(serialization: String) -> Node {
                 }
             }
             ',' => {
-                println!("> length @ {}", buffer.len());
+                // println!("> length @ {}", buffer.len());
                 // if buffer.len() == 0 {
                 //     buffer.push(c);
                 // } else
