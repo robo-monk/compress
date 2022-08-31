@@ -54,6 +54,38 @@ impl Node {
                 .serialize()
         );
     }
+
+    pub fn traverse(&self, value: &Val, mut code: &Vec<bool>) -> Option<Vec<bool>> {
+
+        if !self.is_leaf() {
+            // let mut value;
+            // let code = code;
+            let mut traversed_code = None;
+
+            println!("lef is noe ? {}", self.left.is_none());
+
+            if self.left.is_some() {
+                let mut new_code = code.clone();
+                new_code.push(false);
+                traversed_code = self.left.as_ref().unwrap().traverse(&value, &new_code);
+            }
+            
+            if traversed_code.is_none() && self.right.is_some() {
+                let mut new_code = code.clone();
+                new_code.push(true);
+                traversed_code = self.right.as_ref().unwrap().traverse(&value, &new_code)
+            }
+
+            return traversed_code
+            // return Some(traversed_code)
+        }
+
+        println!("self value {} {}", self.value.as_ref().unwrap(), value.to_owned().unwrap());
+        if self.value != *value { return None }
+        println!("found it! {}", code.len());
+
+        return Some(code.to_owned());
+    }
 }
 
 struct Tree {
@@ -131,7 +163,17 @@ impl Tree {
     fn serialize(&self) -> String {
         self.root.serialize()
     }
-}
+
+    fn traverse(&self, value: Val) -> Option<Vec<bool>> {
+        self.root.traverse(&value, &vec![])
+    }
+    // or traverse as name
+    // fn compile(&self) -> HashMap<u32, Val> {
+    //     let map: HashMap<u32, Val> = HashMap::new();
+    //     map.insert(0, );
+    //     map
+    // }
+} 
 
 fn main() {
     let tree = Tree::new_from(String::from("gamw2222222222"));
@@ -142,6 +184,14 @@ fn main() {
 
     println!("encoded> {}", serialization);
     println!("decoded> {}", _node.serialize());
+
+    let mut code = tree.traverse(Some(String::from("g"))).unwrap_or(vec![]);
+    let mut serialized_code: Vec<&str> = code
+                                .into_iter()
+                                .map(|c| if c { "1" } else { "0" })
+                                .collect();
+    println!("string for 2> {}", serialized_code.concat());
+
     // Node::new(8, String::from("test"));
 }
 
@@ -149,11 +199,9 @@ fn decode(serialization: String) -> Node {
     let mut chars = serialization.chars();
 
     let mut bracket_counter: i32 = 0;
-    let mut starter_bracket_index: i32 = -1;
 
     let mut buffer: Vec<char> = Vec::new();
 
-    let mut index = 0;
     let mut parent_node = Node::new(0, None);
 
     while true {
@@ -231,7 +279,7 @@ fn decode(serialization: String) -> Node {
             }
         }
 
-        index += 1;
+        // index += 1;
     }
 
     return parent_node;
