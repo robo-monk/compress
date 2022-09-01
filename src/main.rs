@@ -1,4 +1,12 @@
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+
+const L_BRACKET: char = '\u{008E}';
+const R_BRACKET: char = '\u{008F}';
+const COMMA: char = '\u{0090}';
+
+
 
 impl From<Node> for Option<Box<Node>> {
     fn from(node: Node) -> Self {
@@ -16,6 +24,9 @@ struct Node {
     left: Option<Box<Node>>,
     right: Option<Box<Node>>,
 }
+
+
+// fn render_char(Sp) 
 
 impl Node {
     fn new(frequency: Freq, value: Val) -> Self {
@@ -37,11 +48,11 @@ impl Node {
         let serialized_value = self.value.as_ref().unwrap_or(empty_value);
 
         if self.is_leaf() {
-            return format!("[{},{},]", serialized_value, self.frequency);
+            return format!("{L_BRACKET}{}{COMMA}{}{COMMA}{R_BRACKET}", serialized_value, self.frequency);
         }
 
         return format!(
-            "[{},{},{},{}]",
+            "{L_BRACKET}{}{COMMA}{}{COMMA}{}{COMMA}{}{R_BRACKET}",
             serialized_value,
             self.frequency,
             self.left
@@ -176,24 +187,16 @@ impl Tree {
 } 
 
 fn main() {
-    let input = "Elon Reeve Musk FRS 
-    The hanfadfkjadlfkj dles a and b will share the underlying buffer and maintain indices tracking the view into the buffer represented by the handle.
 
-See the struct docs for more details.
-djflakfdjlakdjf lkajdfa
-dfa
-df
-asdf
-Buf, BufMutldfkafdk lajdlfkja 
-These two traits provide read and write access to buffers. The underlying storage may or may not be in contiguous memory. For example, Bytes is a buffer that guarantees contiguous memory, but a rope stores the bytes in disjoint chunks. Buf and BufMut maintain cursors tracking the current position in the underlying byte storage. When bytes are read or written, the cursor is advanced.
+    let file_path = "./test.txt";
+    println!("In file {}", file_path);
 
-Relation with Read and Write
-At first glance, it may seem that Buf and BufMut overlap in functionality with std::io::Read and std::io::Write. However, they serve different purposes. A buffer is the value that is provided as an argument to Read::read and Write::write. Read and Write may then perform a syscall, which has the potential of failing. Operations on Buf and BufMut are infallible.
+    let input = fs::read_to_string(file_path)
+        .expect("Should have been able to read the file");
 
+    println!("With text:\n{input}");
 
-    ";
-
-    let tree = Tree::new_from(String::from(input));
+    let tree = Tree::new_from(String::from(input.to_owned()));
     let serialization = tree.serialize();
     println!("{}", serialization);
 
@@ -201,6 +204,7 @@ At first glance, it may seem that Buf and BufMut overlap in functionality with s
 
     println!("encoded> {}", serialization);
     println!("decoded> {}", _node.serialize());
+    println!("error in serialization? {}", if serialization == _node.serialize() { " no " } else { "yes "});
 
     // println!("string for 2> {}", serialized_code.concat());
 
@@ -231,12 +235,13 @@ At first glance, it may seem that Buf and BufMut overlap in functionality with s
         return serialized_code.concat()
     }).collect();
 
-    println!("{}\n{}", serialization, compressed_bytes.concat());
+    // println!("{}\n{}", serialization, compressed_bytes.concat());
     let original_size = input.len()*8;
     let compressed_size = compressed_bytes.concat().len() + serialization.len();
     println!("original size: {} bits \n", original_size);
     println!("compressed size: {} bits \n", compressed_size);
-    println!("-> {}% compressed", 100-(100*compressed_size)/original_size)
+    let compression_rate: f32 = (100*compressed_size/original_size) as f32;
+    println!("-> {}% compressed", 100.0-compression_rate);
     // Node::new(8, String::from("test"));
 }
 
@@ -258,7 +263,7 @@ fn decode(serialization: String) -> Node {
         let c = cursor.unwrap();
 
         match c {
-            '[' => {
+            L_BRACKET => {
                 if bracket_counter > 0 {
                     buffer.push(c);
                 }
@@ -266,7 +271,7 @@ fn decode(serialization: String) -> Node {
                 bracket_counter += 1;
             }
 
-            ']' => {
+            R_BRACKET => {
                 bracket_counter -= 1;
                 buffer.push(c);
 
@@ -299,7 +304,7 @@ fn decode(serialization: String) -> Node {
                     buffer.clear();
                 }
             }
-            ',' => {
+            COMMA => {
 
                 if parent_node.value.is_none() {
                     // println!("~ value > {}", String::from_iter(&buffer));
