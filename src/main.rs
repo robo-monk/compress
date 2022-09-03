@@ -18,6 +18,7 @@ impl From<Node> for Option<Box<Node>> {
 type Freq = u32;
 type Val = Option<String>;
 
+#[derive(Clone)]
 struct Node {
     frequency: Freq,
     value: Val,
@@ -25,6 +26,7 @@ struct Node {
     left: Option<Box<Node>>,
     right: Option<Box<Node>>,
 }
+
 
 // fn render_char(Sp)
 
@@ -36,6 +38,10 @@ impl Node {
             left: None,
             right: None,
         }
+    }
+
+    pub fn unbox(&self) -> &Node {
+        self
     }
 
     pub fn is_leaf(&self) -> bool {
@@ -103,6 +109,8 @@ impl Node {
     }
 }
 
+
+#[derive(Clone)]
 struct Tree {
     root: Node,
 }
@@ -353,13 +361,15 @@ fn main() {
     let read_bytes = read_bytes_from_file(filename).expect("error reading file");
     println!("read_bytes: {} \n", read_bytes.len());
 
+    let mut bits: Vec<bool> = Vec::new();
     read_bytes.into_iter().for_each(|mut byte| {
         byte = byte.reverse_bits();
 
-        for num in 0..8 { // change it to get range
+
+        for _ in 0..8 { // change it to get range
             let lsb = byte & 1;
             byte >>= 1;
-            println!("{lsb}");
+            bits.push(if lsb == 0 { false } else { true });
         }
 
         // println!("le bytes {bit} || {bit3}");
@@ -368,7 +378,32 @@ fn main() {
         // // let le_bytes = byte.to_le_bytes().map(|b| b.to_string());
         // // println!("le bytes {} || {}", le_bytes.join(" "))
         // println!("le bytes {bit} || {bit3}")
-    })
+    });
+
+    let mut values: Vec<Val> = Vec::new();
+    let mut current_node = tree.to_owned().root;
+
+    bits.into_iter().for_each(|bit| {
+        if current_node.to_owned().is_leaf() {
+            let value: Val = current_node.to_owned().value;
+            values.push(value);
+            // current_node = tree.root.to_owned();
+            current_node = tree.to_owned().root;
+        }
+
+        if bit {
+            let right = *current_node.to_owned().right.unwrap();
+            current_node = right;
+            // current_node = current_node.right.to.as_ref().unwrap();
+        } else {
+            let left = *current_node.to_owned().left.unwrap();
+            current_node = left;
+        }
+    });
+
+    let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
+    let text = actual_values.join("");
+    println!("text is {text}");
 
     // // let mut code;
     // if !cache.contains_key(&c) {
