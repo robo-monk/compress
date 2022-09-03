@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+
 
 const L_BRACKET: char = '\u{008E}';
 const R_BRACKET: char = '\u{008F}';
 const COMMA: char = '\u{0090}';
-
-
 
 impl From<Node> for Option<Box<Node>> {
     fn from(node: Node) -> Self {
@@ -25,8 +26,7 @@ struct Node {
     right: Option<Box<Node>>,
 }
 
-
-// fn render_char(Sp) 
+// fn render_char(Sp)
 
 impl Node {
     fn new(frequency: Freq, value: Val) -> Self {
@@ -48,7 +48,10 @@ impl Node {
         let serialized_value = self.value.as_ref().unwrap_or(empty_value);
 
         if self.is_leaf() {
-            return format!("{L_BRACKET}{}{COMMA}{}{COMMA}{R_BRACKET}", serialized_value, self.frequency);
+            return format!(
+                "{L_BRACKET}{}{COMMA}{}{COMMA}{R_BRACKET}",
+                serialized_value, self.frequency
+            );
         }
 
         return format!(
@@ -67,7 +70,6 @@ impl Node {
     }
 
     pub fn traverse(&self, value: &Val, mut code: &Vec<bool>) -> Option<Vec<bool>> {
-
         if !self.is_leaf() {
             // let mut value;
             // let code = code;
@@ -80,19 +82,21 @@ impl Node {
                 new_code.push(false);
                 traversed_code = self.left.as_ref().unwrap().traverse(&value, &new_code);
             }
-            
+
             if traversed_code.is_none() && self.right.is_some() {
                 let mut new_code = code.clone();
                 new_code.push(true);
                 traversed_code = self.right.as_ref().unwrap().traverse(&value, &new_code)
             }
 
-            return traversed_code
+            return traversed_code;
             // return Some(traversed_code)
         }
 
         // println!("self value {} {}", self.value.as_ref().unwrap(), value.to_owned().unwrap());
-        if self.value != *value { return None }
+        if self.value != *value {
+            return None;
+        }
         // println!("found it! {}", code.len());
 
         return Some(code.to_owned());
@@ -184,15 +188,46 @@ impl Tree {
     //     map.insert(0, );
     //     map
     // }
-} 
+}
+
+fn write_bytes_to_file(filename: &str, bytes: &[u8]) -> std::io::Result<()> {
+    {
+        let mut file = File::create(filename)?;
+        // Write a slice of bytes to the file
+        file.write_all(bytes)?;
+    }
+
+    {
+        let mut file = File::open(filename)?;
+        // read the same file back into a Vec of bytes
+        let mut buffer = Vec::<u8>::new();
+        file.read_to_end(&mut buffer)?;
+        println!("{:?}", buffer);
+    }
+    Ok(())
+}
+
+// fn convert_bit_buffer_to_bytes(buf: Vec::<bool>) -> Vec::<u8> {
+//     //  iter.reduce(|accum, item| {
+//     //     if accum >= item { accum } else { item }
+//     // })
+//     let mut current_byte: u8 = 0;
+//     let mut bytes_buffer: Vec::<u8> = Vec::new();
+
+//     buf.into_iter().reduce(|prev, bit| {
+//         println!("{:?}", prev);
+//         // current_byte.rotate_left
+//         return false
+//     });
+
+//     return bytes_buffer;
+// }
 
 fn main() {
-
     let file_path = "./test.txt";
     println!("In file {}", file_path);
 
-    let input = fs::read_to_string(file_path)
-        .expect("Should have been able to read the file");
+    let input = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
     println!("With text:\n{input}");
 
@@ -204,10 +239,16 @@ fn main() {
 
     println!("encoded> {}", serialization);
     println!("decoded> {}", _node.serialize());
-    println!("error in serialization? {}", if serialization == _node.serialize() { " no " } else { "yes "});
+    println!(
+        "error in serialization? {}",
+        if serialization == _node.serialize() {
+            " no "
+        } else {
+            "yes "
+        }
+    );
 
     // println!("string for 2> {}", serialized_code.concat());
-
 
     // input.to_owned().chars().for_each(|c| {
     //     let mut code = tree.traverse(Some(c.to_string())).unwrap_or(vec![]);
@@ -218,31 +259,97 @@ fn main() {
 
     //     println!("{} -> {}", c, serialized_code.concat());
     // });
-    let mut cache: HashMap<char, Vec<bool>> = HashMap::new(); 
+    let mut cache: HashMap<char, Vec<bool>> = HashMap::new();
 
-    let compressed_bytes: Vec<String> = input.to_owned().chars().map(|c| {
-        // let mut code;
+    let compressed_debug: Vec<String> = input
+        .to_owned()
+        .chars()
+        .map(|c| {
+            // let mut code;
+            if !cache.contains_key(&c) {
+                cache.insert(c, tree.traverse(Some(c.to_string())).unwrap_or(vec![]));
+            }
+            let code = cache.get(&c).unwrap();
+
+            let serialized_code: Vec<&str> = code
+                .into_iter()
+                .map(|&c| if c { "1" } else { "0" })
+                .collect();
+            // code
+            // .into_iter()
+            // .map(|&c| if c { "1" } else { "0" })
+
+            // let serialized_bytes: Vec<u8> =
+            //                         .collect();
+
+            return serialized_code.concat();
+        })
+        .collect();
+
+    let mut current_byte_index: usize = 0;
+    let mut current_byte: u8 = 0;
+    let mut bytes: Vec<u8> = Vec::new();
+
+    input.to_owned().chars().enumerate().for_each(|(i, c)| {
         if !cache.contains_key(&c) {
             cache.insert(c, tree.traverse(Some(c.to_string())).unwrap_or(vec![]));
         }
-        let code = cache.get(&c).unwrap();
 
-        let serialized_code: Vec<&str> = code
-                                .into_iter()
-                                .map(|&c| if c { "1" } else { "0" })
-                                .collect();
+        let bits = cache.get(&c).unwrap();
+        bits.iter().for_each(|bit| {
+            if current_byte_index != 0 && current_byte_index % 8 == 0 {
+                bytes.push(current_byte);
+                current_byte = 0;
+            }
 
-        return serialized_code.concat()
-    }).collect();
+            current_byte <<= 1;
+            current_byte += if *bit { 1 } else { 0 };
+            current_byte_index += 1;
+        });
+    });
 
-    // println!("{}\n{}", serialization, compressed_bytes.concat());
-    let original_size = input.len()*8;
-    let compressed_size = compressed_bytes.concat().len() + serialization.len();
+    // this has a bug, we'll also need to shift these the remaining of the byte positions
+    if current_byte > 0 {
+        bytes.push(current_byte)
+    } // add remaining bits if existent
+
+    println!("bytes len {}", bytes.len());
+    bytes.to_owned().into_iter().for_each(|c| {
+        println!(">{:#02b}", c);
+        // String::from("a")
+    });
+
+    // let mut file = File::create("test.txt.zzz");
+    let result = write_bytes_to_file("test.txt.zzz", &bytes);
+    // // let mut code;
+    // if !cache.contains_key(&c) {
+    //     cache.insert(c, tree.traverse(Some(c.to_string())).unwrap_or(vec![]));
+    // }
+    // let code = cache.get(&c).unwrap();
+
+    // let serialized_code: Vec<&str> = code
+    //                         .into_iter()
+    //                         .map(|&c| if c { "1" } else { "0" })
+    //                         .collect();
+    // // code
+    //     // .into_iter()
+    //     // .map(|&c| if c { "1" } else { "0" })
+
+    // // let serialized_bytes: Vec<u8> =
+    // //                         .collect();
+
+    // return serialized_code.concat()
+    // });
+
+    println!("{}\n{}", serialization, compressed_debug.concat());
+    let original_size = input.len() * 8;
+    let compressed_size = compressed_debug.concat().len() + serialization.len();
     println!("original size: {} bits \n", original_size);
     println!("compressed size: {} bits \n", compressed_size);
-    let compression_rate: f32 = (100*compressed_size/original_size) as f32;
-    println!("-> {}% compressed", 100.0-compression_rate);
-    // Node::new(8, String::from("test"));
+    let compression_rate: f32 = (100 * compressed_size / original_size) as f32;
+    println!("-> {}% compressed", 100.0 - compression_rate);
+
+    // println!("-> bytes \n\n {} \n\n", serialized_bytes.join(" "));
 }
 
 fn decode(serialization: String) -> Node {
@@ -305,7 +412,6 @@ fn decode(serialization: String) -> Node {
                 }
             }
             COMMA => {
-
                 if parent_node.value.is_none() {
                     // println!("~ value > {}", String::from_iter(&buffer));
                     parent_node.value = Some(String::from_iter(&buffer));
