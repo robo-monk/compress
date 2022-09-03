@@ -197,15 +197,30 @@ fn write_bytes_to_file(filename: &str, bytes: &[u8]) -> std::io::Result<()> {
         file.write_all(bytes)?;
     }
 
+    // {
+    //     let mut file = File::open(filename)?;
+    //     // read the same file back into a Vec of bytes
+    //     let mut buffer = Vec::<u8>::new();
+    //     file.read_to_end(&mut buffer)?;
+    //     println!("{:?}", buffer);
+    // }
+    Ok(())
+}
+
+fn read_bytes_from_file(filename: &str) -> std::io::Result<Vec::<u8>> {
+
+    let mut buffer = Vec::<u8>::new();
+
     {
         let mut file = File::open(filename)?;
         // read the same file back into a Vec of bytes
-        let mut buffer = Vec::<u8>::new();
         file.read_to_end(&mut buffer)?;
         println!("{:?}", buffer);
     }
-    Ok(())
+
+    Ok(buffer)
 }
+
 
 // fn convert_bit_buffer_to_bytes(buf: Vec::<bool>) -> Vec::<u8> {
 //     //  iter.reduce(|accum, item| {
@@ -320,7 +335,41 @@ fn main() {
     });
 
     // let mut file = File::create("test.txt.zzz");
-    let result = write_bytes_to_file("test.txt.zzz", &bytes);
+    let filename = "test.txt.zzz";
+
+    let result = write_bytes_to_file(filename, &bytes);
+
+
+    println!("{}\n{}", serialization, compressed_debug.concat());
+    let original_size = input.len() * 8;
+    let compressed_size = compressed_debug.concat().len() + serialization.len();
+    println!("original size: {} bits \n", original_size);
+    println!("compressed size: {} bits \n", compressed_size);
+    let compression_rate: f32 = (100 * compressed_size / original_size) as f32;
+    println!("-> {}% compressed", 100.0 - compression_rate);
+
+
+    /// 
+    let read_bytes = read_bytes_from_file(filename).expect("error reading file");
+    println!("read_bytes: {} \n", read_bytes.len());
+
+    read_bytes.into_iter().for_each(|mut byte| {
+        byte = byte.reverse_bits();
+
+        for num in 0..8 { // change it to get range
+            let lsb = byte & 1;
+            byte >>= 1;
+            println!("{lsb}");
+        }
+
+        // println!("le bytes {bit} || {bit3}");
+        // let bit = byte << 1;
+        // let bit3 = byte.rotate_left(1);
+        // // let le_bytes = byte.to_le_bytes().map(|b| b.to_string());
+        // // println!("le bytes {} || {}", le_bytes.join(" "))
+        // println!("le bytes {bit} || {bit3}")
+    })
+
     // // let mut code;
     // if !cache.contains_key(&c) {
     //     cache.insert(c, tree.traverse(Some(c.to_string())).unwrap_or(vec![]));
@@ -340,14 +389,6 @@ fn main() {
 
     // return serialized_code.concat()
     // });
-
-    println!("{}\n{}", serialization, compressed_debug.concat());
-    let original_size = input.len() * 8;
-    let compressed_size = compressed_debug.concat().len() + serialization.len();
-    println!("original size: {} bits \n", original_size);
-    println!("compressed size: {} bits \n", compressed_size);
-    let compression_rate: f32 = (100 * compressed_size / original_size) as f32;
-    println!("-> {}% compressed", 100.0 - compression_rate);
 
     // println!("-> bytes \n\n {} \n\n", serialized_bytes.join(" "));
 }
