@@ -1,7 +1,9 @@
 use std::collections::HashMap;
-const L_BRACKET: char = '\u{008E}';
-const R_BRACKET: char = '\u{008F}';
-const COMMA: char = '\u{0090}';
+pub const L_BRACKET: char = '\u{008E}';
+pub const R_BRACKET: char = '\u{008F}';
+pub const COMMA: char = '\u{0090}';
+pub const NEW_LINE_BYTE: u8 = 29;
+pub const NEW_LINE: char = NEW_LINE_BYTE as char;
 
 impl From<Node> for Option<Box<Node>> {
     fn from(node: Node) -> Self {

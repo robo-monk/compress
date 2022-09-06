@@ -150,16 +150,34 @@ fn main() {
 
     // let mut file = File::create("test.txt.zzz");
 
-    let result = write_bytes_to_file(&output_path, &bytes).expect("could not write file");
+    let mut serialization_bytes = Vec::new();
+    write!(&mut serialization_bytes, "{serialization}");
+    serialization_bytes.push(huffman::NEW_LINE_BYTE);
+    let write_bytes: Vec<u8> = serialization_bytes.into_iter().chain(bytes.into_iter()).collect();
+    let result = write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
 
     // println!("{}\n{}", serialization, compressed_debug.concat());
-    let original_size = input.len();
-    let compressed_size = bytes.len() + serialization.len()/8;
+    let original_size = &input.len();
+    let compressed_size = &write_bytes.len();
     println!("original size: {} bytes \n", original_size);
     println!("compressed size: {} bytes \n", compressed_size);
     let compression_rate: f32 = (100 * compressed_size / original_size) as f32;
     println!("-> {}% compressed", 100.0 - compression_rate);
     println!("-> written to {}", output_path);
+    
+
+    let output_zip = fs::read("./test.txt.zzz").expect("Should have been able to read the file");
+    output_zip.to_vec().into_iter().enumerate().for_each(|(index, byte)| {
+        let char = char::from(byte);
+        if char == huffman::NEW_LINE {
+            println!("> {index} <{char}>");
+        }
+    });
+
+    // let output = fs::read_to_string(format!("./{output_path}")).expect("Should have been able to read the file");
+    // let output = fs::read_to_string("./test.txt.zzz").unwrap();
+// 
+    // println!("-> output {}", format!("./{output}"));
 
 
     // let read_bytes = read_bytes_from_file(filename).expect("error reading file");
