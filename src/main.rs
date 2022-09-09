@@ -48,71 +48,23 @@ fn read_bytes_from_file(filename: &str) -> std::io::Result<Vec::<u8>> {
     Ok(buffer)
 }
 
-
-fn main() {
-    let args = Args::parse();
-
-    println!("input {}!", args.input);
-    println!("output {}!", args.output);
-    println!("decompress? {}!", if args.decompress { "true" } else { "false" });
-
-    let input_path = args.input;
-    let output_path = if args.output.len() > 0 { args.output } else { format!("{input_path}.zzz") };
-
-    // println!("In file {}", input_path);
+fn compress(input_path: String, mut output_path: String) {
+    if output_path.len() == 0 {
+        output_path =  format!("{input_path}.zzz");
+    }
 
     let input = fs::read_to_string(input_path).expect("Should have been able to read the file");
 
-    // println!("With text:\n{input}");
-
     let tree = huffman::Tree::new_from(String::from(input.to_owned()));
     let serialization = tree.serialize();
-    // println!("{}", serialization);
 
+    // DEBUG
     let _node = huffman::decode(serialization.to_owned());
-
-    // println!("encoded> {}", serialization);
-    // println!("decoded> {}", _node.serialize());
-
     assert!(serialization == _node.serialize());
 
-    // println!("string for 2> {}", serialized_code.concat());
 
-    // input.to_owned().chars().for_each(|c| {
-    //     let mut code = tree.traverse(Some(c.to_string())).unwrap_or(vec![]);
-    //     let mut serialized_code: Vec<&str> = code
-    //                             .into_iter()
-    //                             .map(|c| if c { "1" } else { "0" })
-    //                             .collect();
 
-    //     println!("{} -> {}", c, serialized_code.concat());
-    // });
     let mut cache: HashMap<char, Vec<bool>> = HashMap::new();
-
-    // let compressed_debug: Vec<String> = input
-    //     .to_owned()
-    //     .chars()
-    //     .map(|c| {
-    //         // let mut code;
-    //         if !cache.contains_key(&c) {
-    //             cache.insert(c, tree.traverse(Some(c.to_string())).unwrap_or(vec![]));
-    //         }
-    //         let code = cache.get(&c).unwrap();
-
-    //         let serialized_code: Vec<&str> = code
-    //             .into_iter()
-    //             .map(|&c| if c { "1" } else { "0" })
-    //             .collect();
-    //         // code
-    //         // .into_iter()
-    //         // .map(|&c| if c { "1" } else { "0" })
-
-    //         // let serialized_bytes: Vec<u8> =
-    //         //                         .collect();
-
-    //         return serialized_code.concat();
-    //     })
-    //     .collect();
 
     let mut current_byte_index: usize = 0;
     let mut current_byte: u8 = 0;
@@ -143,12 +95,6 @@ fn main() {
     } // add remaining bits if existent
 
     println!("bytes len {}", bytes.len());
-    // bytes.to_owned().into_iter().for_each(|c| {
-    //     println!(">{:#02b}", c);
-    //     // String::from("a")
-    // });
-
-    // let mut file = File::create("test.txt.zzz");
 
     let mut serialization_bytes = Vec::new();
     write!(&mut serialization_bytes, "{serialization}");
@@ -164,14 +110,90 @@ fn main() {
     let compression_rate: f32 = (100 * compressed_size / original_size) as f32;
     println!("-> {}% compressed", 100.0 - compression_rate);
     println!("-> written to {}", output_path);
-    
 
-    let output_zip = fs::read("./test.txt.zzz").expect("Should have been able to read the file");
+}
+
+fn decompress(input_path: String, output_path: String) {
+    let output_zip = fs::read(input_path).expect("Should have been able to read the file");
     let group_seperator_index = output_zip.to_vec().into_iter().position(|byte| byte == huffman::NEW_LINE_BYTE).unwrap() + 1; 
 
     let mut o = output_zip.to_owned();
     let serilization_input: Vec<u8> = o.splice(0..group_seperator_index, None).collect();
     println!("> serialization len {}", serilization_input.len());
+    let output_tree2 = huffman::Tree::new_from_serialization_bytes(&serilization_input);
+    // println!("> {}", output_tree.serialize());
+    println!("> {}", output_tree2.serialize());
+
+    let tape: Vec<u8> = o.splice(group_seperator_index.., None).collect();
+
+
+    let mut bits: Vec<bool> = Vec::new();
+    tape.into_iter().for_each(|mut byte| {
+        byte = byte.reverse_bits();
+        for _ in 0..8 { // change it to get range
+            let lsb = byte & 1;
+            byte >>= 1;
+            bits.push(if lsb == 0 { false } else { true });
+        }
+
+        // println!("le bytes {bit} || {bit3}");
+        // let bit = byte << 1;
+        // let bit3 = byte.rotate_left(1);
+        // // let le_bytes = byte.to_le_bytes().map(|b| b.to_string());
+        // // println!("le bytes {} || {}", le_bytes.join(" "))
+        // println!("le bytes {bit} || {bit3}")
+    });
+
+    println!("done reading bits");
+
+    let mut values: Vec<huffman::Val> = Vec::new();
+    let mut current_node = output_tree2.to_owned().root;
+
+    // let mut _current_path: Vec<bool> = Vec::new();
+    // let mut _cache: HashMap<Vec<bool>, huffman::Val> = HashMap::new();
+    // very very slow!
+    bits.into_iter().for_each(|bit| {
+        let mut node = current_node.to_owned();
+
+        if node.is_leaf() {
+            let value: huffman::Val = node.value;
+            values.push(value);
+            // current_node = tree.root.to_owned();
+            node = output_tree2.to_owned().root;
+        }
+
+        if bit {
+            let right = *node.right.unwrap();
+            current_node = right;
+            // current_node = current_node.right.to.as_ref().unwrap();
+        } else {
+            let left = *node.left.unwrap();
+            current_node = left;
+        }
+    });
+
+    println!("done traversing tree");
+    let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
+    let text = actual_values.join("");
+    println!("text is {text}");
+    // println!("> {}", tape);
+}
+
+fn main() {
+    let args = Args::parse();
+
+    println!("input {}!", args.input);
+    println!("output {}!", args.output);
+    println!("decompress? {}!", if args.decompress { "true" } else { "false" });
+
+    let input_path = args.input;
+    let output_path = args.output;
+
+    let action = if args.decompress { decompress } else { compress };
+
+    action(input_path, output_path);
+
+
     // serilization_input.to_owned().into_iter().for_each(|b| {
     //     let c  = char::from(b);
     //     print!("{c}|");
@@ -188,10 +210,7 @@ fn main() {
     
     // let output_tree = huffman::Tree::new_from_bytes(&serilization_input);
     // let output_tree = huffman::Tree::new_from(ser);
-    let output_tree2 = huffman::Tree::new_from_serialization_bytes(&serilization_input);
-    // println!("> {}", output_tree.serialize());
-    println!("> {}", output_tree2.serialize());
-    // println!("> {}", serilization_input);
+   // println!("> {}", serilization_input);
     // output_zip.to_vec().into_iter().enumerate().for_each(|(index, byte)| {
     //     let char = char::from(byte);
     //     if char == huffman::NEW_LINE {
