@@ -124,7 +124,7 @@ fn decompress(input_path: String, output_path: String) {
     // println!("> {}", output_tree.serialize());
     println!("> {}", output_tree2.serialize());
 
-    let tape: Vec<u8> = o.splice(group_seperator_index.., None).collect();
+    let tape: Vec<u8> = o.splice((group_seperator_index-1).., None).collect();
 
 
     let mut bits: Vec<bool> = Vec::new();
