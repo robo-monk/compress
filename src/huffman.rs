@@ -1,9 +1,28 @@
 use std::collections::HashMap;
-pub const L_BRACKET: char = '\u{008E}';
-pub const R_BRACKET: char = '\u{008F}';
-pub const COMMA: char = '\u{0090}';
+
+// pub const L_BRACKET: char = '\u{008E}';
+// pub const R_BRACKET: char = '\u{008F}';
+// pub const COMMA: char = '\u{0090}';
 pub const NEW_LINE_BYTE: u8 = 29;
 pub const NEW_LINE: char = NEW_LINE_BYTE as char;
+
+pub const L_BRACKET_BYTE: u8 = 15; // ASCII esc. code for "shift in"
+pub const R_BRACKET_BYTE: u8 = 14; // ASCII esc. code for "shift out"
+pub const COMMA_BYTE: u8 = 26; // ASCII esc. code for "substitue" !WILL REMOVE CAUSE ITS NOT NECESARY
+
+
+pub const L_BRACKET: char = L_BRACKET_BYTE as char;
+pub const R_BRACKET: char = R_BRACKET_BYTE as char;
+pub const COMMA: char = COMMA_BYTE as char;
+
+// pub const L_BRACKET: char = '[';
+// pub const R_BRACKET: char = ']';
+// pub const COMMA: char = ',';
+
+// pub const NEW_LINE_BYTE: u8 = b'\n';
+// pub const NEW_LINE: char = NEW_LINE_BYTE as char;
+
+
 
 impl From<Node> for Option<Box<Node>> {
     fn from(node: Node) -> Self {
@@ -160,6 +179,25 @@ fn get_frequency_map(s: String) -> HashMap<char, Freq> {
     frequency_map
 }
 
+fn get_frequency_map_from_bytes(bytes: &Vec<u8>) -> HashMap<char, Freq> {
+    // let chars = s.chars();
+
+    let mut frequency_map: HashMap<char, Freq> = HashMap::new();
+    for b in bytes {
+        let c = char::from(*b);
+        print!("{c}");
+        let mut char_frequency: Freq = 0;
+
+        if frequency_map.contains_key(&c) {
+            char_frequency = *frequency_map.get(&c).unwrap();
+        }
+
+        frequency_map.insert(c, char_frequency + 1);
+    }
+
+    frequency_map
+}
+
 impl Tree {
     fn new(root: Node) -> Self {
         Tree { root }
@@ -171,9 +209,24 @@ impl Tree {
         queue_to_tree(queue)
     }
 
+    pub fn new_from_bytes(bytes: &Vec<u8>) -> Self {
+        let frequency_map = get_frequency_map_from_bytes(bytes);
+        let queue = frequency_map_to_queue(frequency_map);
+        queue_to_tree(queue)
+    }
+
     // fn new_from_serialization(serialization: String) -> Self {
     //     let chars
     // }
+    
+    pub fn new_from_serialization(serialization: String) -> Self {
+        let root = decode(serialization);
+        Tree { root }
+    }
+    pub fn new_from_serialization_bytes(bytes: &Vec<u8>) -> Self {
+        let root = decode_bytes(bytes);
+        Tree { root }
+    }
 
     pub fn serialize(&self) -> String {
         self.root.serialize()
@@ -188,6 +241,102 @@ impl Tree {
     //     map.insert(0, );
     //     map
     // }
+}
+
+pub fn decode_bytes(bytes: &Vec<u8>) -> Node {
+    // let mut chars = serialization.chars();
+
+    let mut bracket_counter: i32 = 0;
+
+    // let mut buffer: Vec<char> = Vec::new();
+    let mut buffer: Vec<u8> = Vec::new();
+
+    let mut parent_node = Node::new(0, None);
+
+    let mut bytes_iter = bytes.iter();
+    while true {
+        let cursor = bytes_iter.next();
+        if cursor.is_none() { break };
+
+        let b = cursor.unwrap();
+        let c = char::from(*b);
+
+        match b {
+            &L_BRACKET_BYTE => {
+                if bracket_counter > 0 {
+                    buffer.push(*b);
+                }
+
+                bracket_counter += 1;
+            }
+
+            &R_BRACKET_BYTE => {
+                bracket_counter -= 1;
+                buffer.push(*b);
+
+                if bracket_counter == 0 {
+                    // let s = String::from_iter(&buffer);
+                    // println!("clear buffer >> {}", s);
+                    // println!("parent node is >> {}", parent_node.serialize());
+                    // println!("----");
+                    // decode(s);
+                    buffer.clear();
+                } else if bracket_counter == 1 {
+                    // let branch = String::from_iter(&buffer);
+                    // println!("parent node is >> {}", parent_node.serialize());
+                    if parent_node.left.is_none() {
+                        // let node = decode(branch.to_owned());
+                        // println!(">> node > {}", node.serialize());
+                        // println!("left branch >> {}", branch);
+                        // parent_node.left = decode(branch.to_owned()).into();
+                        parent_node.left = decode_bytes(&buffer).into();
+                        // println!(">> found left branch > {}  \n\n {} \n\n", branch, parent_node.serialize());
+                    } else if parent_node.right.is_none() {
+                        // println!("right branch >> {}", branch);
+                        // OPTIMIZE
+                        let mut trimmed_branch = buffer.to_owned();
+                        trimmed_branch.remove(0);
+                        parent_node.right = decode_bytes(&trimmed_branch).into();
+                        // println!(">> found right branch > {}", branch);
+                    } else {
+                        println!(">> invalid serialization");
+                    }
+
+                    buffer.clear();
+                }
+            }
+            &COMMA_BYTE => {
+                if parent_node.value.is_none() {
+                    // println!("~ value > {}", String::from_iter(&buffer));
+                    let chars = buffer.iter().map(|b| {
+                        char::from(*b)
+                    });
+
+                    parent_node.value = Some(String::from_iter(chars));
+                    buffer.clear();
+                } else if parent_node.frequency == 0 {
+                    let chars = buffer.iter().map(|b| {
+                        char::from(*b)
+                    });
+                    // println!("~ freq > {}", String::from_iter(&buffer));
+                    parent_node.frequency = String::from_iter(chars).parse().unwrap_or(255);
+                    // parent_node.frequency = String::from_iter(&buffer).parse().unwrap_or(255);
+                    // println!("~ freq > {}", parent_node.frequency);
+                    buffer.clear();
+                } else {
+                    buffer.push(*b);
+                }
+            }
+            _ => {
+                buffer.push(*b);
+                // println!("~ {}", c);
+            }
+        }
+
+        // index += 1;
+    }
+
+    return parent_node;
 }
 
 pub fn decode(serialization: String) -> Node {

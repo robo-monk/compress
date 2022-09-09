@@ -167,12 +167,37 @@ fn main() {
     
 
     let output_zip = fs::read("./test.txt.zzz").expect("Should have been able to read the file");
-    output_zip.to_vec().into_iter().enumerate().for_each(|(index, byte)| {
-        let char = char::from(byte);
-        if char == huffman::NEW_LINE {
-            println!("> {index} <{char}>");
-        }
-    });
+    let group_seperator_index = output_zip.to_vec().into_iter().position(|byte| byte == huffman::NEW_LINE_BYTE).unwrap() + 1; 
+
+    let mut o = output_zip.to_owned();
+    let serilization_input: Vec<u8> = o.splice(0..group_seperator_index, None).collect();
+    println!("> serialization len {}", serilization_input.len());
+    // serilization_input.to_owned().into_iter().for_each(|b| {
+    //     let c  = char::from(b);
+    //     print!("{c}|");
+    // });
+
+    // let chars_ser: Vec<String> = serilization_input.to_owned().into_iter().map(|b| {
+    //     let c  = char::from(b);
+    //     // print!("{c}|");
+    //     format!("{c}")
+    // }).collect();
+
+    // let ser = chars_ser.join("");
+    // println!("\n--");
+    
+    // let output_tree = huffman::Tree::new_from_bytes(&serilization_input);
+    // let output_tree = huffman::Tree::new_from(ser);
+    let output_tree2 = huffman::Tree::new_from_serialization_bytes(&serilization_input);
+    // println!("> {}", output_tree.serialize());
+    println!("> {}", output_tree2.serialize());
+    // println!("> {}", serilization_input);
+    // output_zip.to_vec().into_iter().enumerate().for_each(|(index, byte)| {
+    //     let char = char::from(byte);
+    //     if char == huffman::NEW_LINE {
+    //         println!("> {index} <{char}>");
+    //     }
+    // });
 
     // let output = fs::read_to_string(format!("./{output_path}")).expect("Should have been able to read the file");
     // let output = fs::read_to_string("./test.txt.zzz").unwrap();
