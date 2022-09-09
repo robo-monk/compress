@@ -107,7 +107,7 @@ fn decompress(input_path: String, output_path: String) {
     println!("> serialization len {}", serilization_input.len());
     let output_tree2 = huffman::Tree::new_from_serialization_bytes(&serilization_input);
     // println!("> {}", output_tree.serialize());
-    println!("> {}", output_tree2.serialize());
+    // println!("> {}", output_tree2.serialize());
 
     let tape: Vec<u8> = o.splice((group_seperator_index-1).., None).collect();
 

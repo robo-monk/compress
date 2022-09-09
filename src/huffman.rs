@@ -130,7 +130,7 @@ fn queue_to_tree(mut queue: Vec<Node>) -> Tree {
 fn frequency_map_to_queue(map: HashMap<char, Freq>) -> Vec<Node> {
     let mut queue: Vec<Node> = Vec::new();
     for (c, frequency) in map.iter() {
-        println!("char: {c} freq: {frequency}");
+        // println!("char: {c} freq: {frequency}");
         queue.push(Node::new(*frequency, Some(c.to_string())))
     }
 
