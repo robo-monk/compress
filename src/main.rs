@@ -34,20 +34,6 @@ fn write_bytes_to_file(filename: &str, bytes: &[u8]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn read_bytes_from_file(filename: &str) -> std::io::Result<Vec::<u8>> {
-
-    let mut buffer = Vec::<u8>::new();
-
-    {
-        let mut file = File::open(filename)?;
-        // read the same file back into a Vec of bytes
-        file.read_to_end(&mut buffer)?;
-        // println!("{:?}", buffer);
-    }
-
-    Ok(buffer)
-}
-
 fn compress(input_path: String, mut output_path: String) {
     if output_path.len() == 0 {
         output_path =  format!("{input_path}.zzz");
@@ -59,9 +45,8 @@ fn compress(input_path: String, mut output_path: String) {
     let serialization = tree.serialize();
 
     // DEBUG
-    let _node = huffman::decode(serialization.to_owned());
-    assert!(serialization == _node.serialize());
-
+    // let _node = huffman::decode(serialization.to_owned());
+    // assert!(serialization == _node.serialize());
 
 
     let mut cache: HashMap<char, Vec<bool>> = HashMap::new();
@@ -127,60 +112,43 @@ fn decompress(input_path: String, output_path: String) {
     let tape: Vec<u8> = o.splice((group_seperator_index-1).., None).collect();
 
 
-    let mut bits: Vec<bool> = Vec::new();
+    let mut values: Vec<huffman::Val> = Vec::new();
+    let mut current_node = output_tree2.root.to_owned();
+
     tape.into_iter().for_each(|mut byte| {
         byte = byte.reverse_bits();
         for _ in 0..8 { // change it to get range
             let lsb = byte & 1;
             byte >>= 1;
-            bits.push(if lsb == 0 { false } else { true });
-        }
 
-        // println!("le bytes {bit} || {bit3}");
-        // let bit = byte << 1;
-        // let bit3 = byte.rotate_left(1);
-        // // let le_bytes = byte.to_le_bytes().map(|b| b.to_string());
-        // // println!("le bytes {} || {}", le_bytes.join(" "))
-        // println!("le bytes {bit} || {bit3}")
-    });
+            let mut node = current_node.to_owned();
 
-    println!("done reading bits");
+            if node.is_leaf() {
+                let value: huffman::Val = node.value;
+                values.push(value);
 
-    let mut values: Vec<huffman::Val> = Vec::new();
-    let mut current_node = output_tree2.root.to_owned();
+                node = output_tree2.root.to_owned();
+            }
 
-    bits.into_iter().for_each(|bit| {
-        let mut node = current_node.to_owned();
-
-        if node.is_leaf() {
-            let value: huffman::Val = node.value;
-            values.push(value);
-
-            node = output_tree2.root.to_owned();
-        }
-
-        if bit {
-            let right = *node.right.unwrap();
-            current_node = right;
-            // current_node = current_node.right.to.as_ref().unwrap();
-        } else {
-            let left = *node.left.unwrap();
-            current_node = left;
+            if lsb == 1 {
+                let right = *node.right.unwrap();
+                current_node = right;
+            } else {
+                let left = *node.left.unwrap();
+                current_node = left;
+            }
         }
     });
-
 
     println!("done traversing tree");
     let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
     let text = actual_values.join("");
-    println!("text is {text}");
+    println!("text len is {}", text.len());
 
 
     let mut write_bytes = Vec::new();
     write!(&mut write_bytes, "{text}").expect("could not write buffer");
-    let result = write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
-
-    // println!("> {}", tape);
+    write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
 }
 
 fn main() {
@@ -196,88 +164,4 @@ fn main() {
     let action = if args.decompress { decompress } else { compress };
 
     action(input_path, output_path);
-
-
-    // serilization_input.to_owned().into_iter().for_each(|b| {
-    //     let c  = char::from(b);
-    //     print!("{c}|");
-    // });
-
-    // let chars_ser: Vec<String> = serilization_input.to_owned().into_iter().map(|b| {
-    //     let c  = char::from(b);
-    //     // print!("{c}|");
-    //     format!("{c}")
-    // }).collect();
-
-    // let ser = chars_ser.join("");
-    // println!("\n--");
-    
-    // let output_tree = huffman::Tree::new_from_bytes(&serilization_input);
-    // let output_tree = huffman::Tree::new_from(ser);
-   // println!("> {}", serilization_input);
-    // output_zip.to_vec().into_iter().enumerate().for_each(|(index, byte)| {
-    //     let char = char::from(byte);
-    //     if char == huffman::NEW_LINE {
-    //         println!("> {index} <{char}>");
-    //     }
-    // });
-
-    // let output = fs::read_to_string(format!("./{output_path}")).expect("Should have been able to read the file");
-    // let output = fs::read_to_string("./test.txt.zzz").unwrap();
-// 
-    // println!("-> output {}", format!("./{output}"));
-
-
-    // let read_bytes = read_bytes_from_file(filename).expect("error reading file");
-    // // println!("read_bytes: {} \n", read_bytes.len());
-
-    // let mut bits: Vec<bool> = Vec::new();
-    // read_bytes.into_iter().for_each(|mut byte| {
-    //     byte = byte.reverse_bits();
-    //     for _ in 0..8 { // change it to get range
-    //         let lsb = byte & 1;
-    //         byte >>= 1;
-    //         bits.push(if lsb == 0 { false } else { true });
-    //     }
-
-    //     // println!("le bytes {bit} || {bit3}");
-    //     // let bit = byte << 1;
-    //     // let bit3 = byte.rotate_left(1);
-    //     // // let le_bytes = byte.to_le_bytes().map(|b| b.to_string());
-    //     // // println!("le bytes {} || {}", le_bytes.join(" "))
-    //     // println!("le bytes {bit} || {bit3}")
-    // });
-
-    // println!("done reading bits");
-
-    // let mut values: Vec<huffman::Val> = Vec::new();
-    // let mut current_node = tree.to_owned().root;
-
-    // // let mut _current_path: Vec<bool> = Vec::new();
-    // // let mut _cache: HashMap<Vec<bool>, huffman::Val> = HashMap::new();
-    // // very very slow!
-    // bits.into_iter().for_each(|bit| {
-    //     let mut node = current_node.to_owned();
-
-    //     if node.is_leaf() {
-    //         let value: huffman::Val = node.value;
-    //         values.push(value);
-    //         // current_node = tree.root.to_owned();
-    //         node = tree.to_owned().root;
-    //     }
-
-    //     if bit {
-    //         let right = *node.right.unwrap();
-    //         current_node = right;
-    //         // current_node = current_node.right.to.as_ref().unwrap();
-    //     } else {
-    //         let left = *node.left.unwrap();
-    //         current_node = left;
-    //     }
-    // });
-
-    // println!("done traversing tree");
-    // let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
-    // let text = actual_values.join("");
-    // println!("text is {text}");
 }
