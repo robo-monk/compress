@@ -97,7 +97,7 @@ fn compress(input_path: String, mut output_path: String) {
     println!("bytes len {}", bytes.len());
 
     let mut serialization_bytes = Vec::new();
-    write!(&mut serialization_bytes, "{serialization}");
+    write!(&mut serialization_bytes, "{serialization}").expect("could not write buffer");
     serialization_bytes.push(huffman::NEW_LINE_BYTE);
     let write_bytes: Vec<u8> = serialization_bytes.into_iter().chain(bytes.into_iter()).collect();
     let result = write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
@@ -147,19 +147,16 @@ fn decompress(input_path: String, output_path: String) {
     println!("done reading bits");
 
     let mut values: Vec<huffman::Val> = Vec::new();
-    let mut current_node = output_tree2.to_owned().root;
+    let mut current_node = output_tree2.root.to_owned();
 
-    // let mut _current_path: Vec<bool> = Vec::new();
-    // let mut _cache: HashMap<Vec<bool>, huffman::Val> = HashMap::new();
-    // very very slow!
     bits.into_iter().for_each(|bit| {
         let mut node = current_node.to_owned();
 
         if node.is_leaf() {
             let value: huffman::Val = node.value;
             values.push(value);
-            // current_node = tree.root.to_owned();
-            node = output_tree2.to_owned().root;
+
+            node = output_tree2.root.to_owned();
         }
 
         if bit {
@@ -172,10 +169,17 @@ fn decompress(input_path: String, output_path: String) {
         }
     });
 
+
     println!("done traversing tree");
     let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
     let text = actual_values.join("");
     println!("text is {text}");
+
+
+    let mut write_bytes = Vec::new();
+    write!(&mut write_bytes, "{text}").expect("could not write buffer");
+    let result = write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
+
     // println!("> {}", tape);
 }
 
