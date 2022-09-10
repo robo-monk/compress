@@ -112,43 +112,75 @@ fn decompress(input_path: String, output_path: String) {
     let tape: Vec<u8> = o.splice((group_seperator_index-1).., None).collect();
 
 
-    let mut values: Vec<huffman::Val> = Vec::new();
+    let mut values: Vec<&huffman::Val> = Vec::new();
+    let root = &output_tree2.root;
     let mut current_node = output_tree2.root.to_owned();
+
+    let mut cache: HashMap<Vec<bool>, huffman::Val> = HashMap::new();
+    // fn traverse_tree(path: &Vec<bool>, node: &huffman::Node) -> huffman::Node {
+        // path.iter().for_each(|bit| {
+        // });
+
+        // if next_bit.is_none() {
+        //     return node.to_owned()
+        // }
+        // return traverse_tree(&path, node)
+    // }
+
+    let leaves = output_tree2.derive();
+    let mut current_path: Vec<bool> = Vec::new();
 
     tape.into_iter().for_each(|mut byte| {
         byte = byte.reverse_bits();
         for _ in 0..8 { // change it to get range
+
             let lsb = byte & 1;
             byte >>= 1;
+            current_path.push(if lsb == 0 { false } else { true });
 
-            let mut node = current_node.to_owned();
-
-            if node.is_leaf() {
-                let value: huffman::Val = node.value;
-                values.push(value);
-
-                node = output_tree2.root.to_owned();
+            if leaves.contains_key(&current_path) {
+                // we're on a leaf
+                let node = leaves.get(&current_path);
+                values.push(&node.unwrap().value);
+                current_path.clear();
             }
+            // if cache.contains_key(&current_path) {
+            //     let value = cache.get(&current_path).unwrap();
+            //     values.push(&value);
+            //     current_path.clear();
+            //     current_node = root.to_owned();
+            // } else {
+            //     let mut node = current_node.to_owned();
 
-            if lsb == 1 {
-                let right = *node.right.unwrap();
-                current_node = right;
-            } else {
-                let left = *node.left.unwrap();
-                current_node = left;
-            }
+            //     if node.is_leaf() {
+            //         // let value: huffman::Val = node.value;
+            //         // cache.insert(current_path, node.value);
+            //         // values.push(cache.get(&current_path).unwrap());
+
+            //         node = output_tree2.root.to_owned();
+            //         current_path.clear();
+            //     }
+
+            //     if lsb == 1 {
+            //         let right = *node.right.unwrap();
+            //         current_node = right;
+            //     } else {
+            //         let left = *node.left.unwrap();
+            //         current_node = left;
+            //     }
+            // }
         }
     });
 
     println!("done traversing tree");
-    let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
-    let text = actual_values.join("");
-    println!("text len is {}", text.len());
+    // let actual_values: Vec<String> = values.into_iter().map(|value| value.unwrap()).collect();
+    // let text = actual_values.join("");
+    // println!("text len is {}", text.len());
 
 
-    let mut write_bytes = Vec::new();
-    write!(&mut write_bytes, "{text}").expect("could not write buffer");
-    write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
+    // let mut write_bytes = Vec::new();
+    // write!(&mut write_bytes, "{text}").expect("could not write buffer");
+    // write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
 }
 
 fn main() {

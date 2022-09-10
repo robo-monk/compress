@@ -71,7 +71,7 @@ impl Node {
         );
     }
 
-    pub fn traverse(&self, value: &Val, mut code: &Vec<bool>) -> Option<Vec<bool>> {
+    pub fn traverse(&self, value: &Val, code: &Vec<bool>) -> Option<Vec<bool>> {
         if !self.is_leaf() {
             let mut traversed_code = None;
 
@@ -95,6 +95,21 @@ impl Node {
         }
 
         return Some(code.to_owned());
+    }
+
+    // pub fn find_leaves(&self, leaves: &Vec<&Node>) -> &Vec<&Node> {
+    pub fn find_leaves<'a, 'b>(&'a self, leaves: &'b mut Vec<&'a Node>) {
+        if self.is_leaf() {
+            leaves.push(&self);
+        } else {
+            self.left.as_ref().unwrap().find_leaves(leaves);
+            self.right.as_ref().unwrap().find_leaves(leaves);
+            // leaves = self.left.as_ref().unwrap().find_leaves(leaves);
+            // self.left.as_ref().unwrap().find_leaves(&mut *leaves);
+            // self.right.as_ref().unwrap().find_leaves(&mut *leaves);
+        }
+
+        // leaves
     }
 }
 
@@ -207,6 +222,29 @@ impl Tree {
     pub fn traverse(&self, value: Val) -> Option<Vec<bool>> {
         self.root.traverse(&value, &vec![])
     }
+
+    pub fn derive(&self) -> HashMap<Vec<bool>, &Node> {
+        let mut map: HashMap<Vec<bool>, &Node> = HashMap::new();
+        let mut _leaves: Vec<&Node> = Vec::new();
+        self.root.find_leaves(&mut _leaves);
+        println!("[derive] leaves len {}", _leaves.len());
+        // let values: Vec<(Option<Vec<bool>>, &Node)> = _leaves.to_vec().iter().map(|leaf| {
+        //     let value = leaf.value.to_owned().unwrap();
+        //     (self.traverse(Some(value)), *leaf)
+        //     // map.insert()
+        // }).collect();
+
+        _leaves.to_vec().iter().for_each(|leaf| {
+            let value = leaf.value.to_owned().unwrap();
+            let coords = self.traverse(Some(value));
+            map.insert(coords.unwrap(), *leaf);
+            // (), *leaf)
+            // map.insert()
+        });
+
+        return map;
+    }
+
     // or traverse as name
     // fn compile(&self) -> HashMap<u32, Val> {
     //     let map: HashMap<u32, Val> = HashMap::new();
