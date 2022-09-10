@@ -132,17 +132,10 @@ fn decompress(input_path: String, output_path: String) {
     });
 
     println!("done traversing tree");
+
     let actual_values: Vec<&String> = values.into_iter().map(|value| value.as_ref().unwrap()).collect();
-    let write_bytes: Vec<u8> = actual_values.iter().map(|s| {
-        let b = s.as_bytes().get(0).unwrap();
-        *b
-    }).collect();
-    // let text = actual_values.join("");
-    // println!("text len is {}", text.len());
+    let write_bytes: Vec<u8> = actual_values.iter().map(|s| *s.as_bytes().get(0).unwrap()).collect();
 
-
-    // let mut write_bytes = Vec::new();
-    // write!(&mut write_bytes, "{text}").expect("could not write buffer");
     write_bytes_to_file(&output_path, &write_bytes).expect("could not write file");
 }
 
