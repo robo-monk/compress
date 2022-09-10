@@ -227,49 +227,29 @@ impl Tree {
         let mut map: HashMap<Vec<bool>, &Node> = HashMap::new();
         let mut _leaves: Vec<&Node> = Vec::new();
         self.root.find_leaves(&mut _leaves);
-        println!("[derive] leaves len {}", _leaves.len());
-        // let values: Vec<(Option<Vec<bool>>, &Node)> = _leaves.to_vec().iter().map(|leaf| {
-        //     let value = leaf.value.to_owned().unwrap();
-        //     (self.traverse(Some(value)), *leaf)
-        //     // map.insert()
-        // }).collect();
 
         _leaves.to_vec().iter().for_each(|leaf| {
             let value = leaf.value.to_owned().unwrap();
             let coords = self.traverse(Some(value));
             map.insert(coords.unwrap(), *leaf);
-            // (), *leaf)
-            // map.insert()
         });
 
         return map;
     }
-
-    // or traverse as name
-    // fn compile(&self) -> HashMap<u32, Val> {
-    //     let map: HashMap<u32, Val> = HashMap::new();
-    //     map.insert(0, );
-    //     map
-    // }
 }
 
 pub fn decode_bytes(bytes: &Vec<u8>) -> Node {
-    // let mut chars = serialization.chars();
-
     let mut bracket_counter: i32 = 0;
 
-    // let mut buffer: Vec<char> = Vec::new();
     let mut buffer: Vec<u8> = Vec::new();
 
     let mut parent_node = Node::new(0, None);
 
     let mut bytes_iter = bytes.iter();
-    while true {
-        let cursor = bytes_iter.next();
-        if cursor.is_none() { break };
+    let mut cursor = bytes_iter.next();
+    while cursor.is_some() {
 
         let b = cursor.unwrap();
-        let c = char::from(*b);
 
         match b {
             &L_BRACKET_BYTE => {
@@ -325,6 +305,7 @@ pub fn decode_bytes(bytes: &Vec<u8>) -> Node {
             }
         }
 
+        cursor = bytes_iter.next();
     }
 
     return parent_node;
